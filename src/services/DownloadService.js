@@ -7,7 +7,7 @@ import path from 'path';
 import { pipeline } from 'stream/promises';
 import { promisify } from 'util';
 
-import { DEFAULT_VIDEO_QUALITY, DOWNLOAD_TIMEOUT_MS, YOUTUBE_PATTERNS } from '../config/constants.js';
+import { DEFAULT_VIDEO_QUALITY, DOWNLOAD_TIMEOUT_MS, MAX_REDIRECTS, YOUTUBE_PATTERNS } from '../config/constants.js';
 import logger from '../utils/logger.js';
 
 const execFileAsync = promisify(execFile);
@@ -74,30 +74,57 @@ class DownloadService {
 	 * @returns {Promise<object>} Result with filePath and filename
 	 */
 	async download(url, issueTitle) {
-		if (this.isYoutubeUrl(url)) {
-			return this.downloadYoutube(url, issueTitle);
+		try {
+			if (this.isYoutubeUrl(url)) {
+				return await this.downloadYoutube(url, issueTitle);
+			}
+			return await this.downloadFile(url);
+		} catch (err) {
+			throw new Error(`Failed to download "${url}": ${err.message}`);
 		}
-		return this.downloadFile(url);
 	}
 
 	/**
-	 * Downloads a regular file via HTTP/HTTPS.
+	 * Downloads a regular file via HTTP/HTTPS with redirect support.
 	 * @param {string} url - The file URL
+	 * @param {number} redirectCount - Current redirect depth
 	 * @returns {Promise<object>} Result with filePath and filename
 	 */
-	async downloadFile(url) {
+	async downloadFile(url, redirectCount = 0) {
+		if (redirectCount > MAX_REDIRECTS) {
+			throw new Error('Too many redirects');
+		}
+
 		const filename = this.extractFilename(url);
 		const filePath = path.join(this.tmpDir, filename);
-
 		const client = url.startsWith('https') ? https : http;
 
-		await new Promise((resolve, reject) => {
+		try {
+			const redirect = await this.executeDownload({ client, filePath, url });
+			if (redirect) {
+				return this.downloadFile(redirect, redirectCount + 1);
+			}
+		} catch (err) {
+			this.cleanupFile(filePath);
+			throw err;
+		}
+
+		return { filename, filePath };
+	}
+
+	/**
+	 * Executes the HTTP download request.
+	 * @param {object} options - Download options
+	 * @param {object} options.client - HTTP/HTTPS module
+	 * @param {string} options.filePath - Destination file path
+	 * @param {string} options.url - URL to download
+	 * @returns {Promise<string|null>} Redirect URL or null if downloaded
+	 */
+	executeDownload({ client, filePath, url }) {
+		return new Promise((resolve, reject) => {
 			client.get(url, (response) => {
 				if (response.statusCode >= 300 && response.statusCode < 400) {
-					const redirectUrl = response.headers.location;
-					this.downloadFile(redirectUrl)
-						.then(resolve)
-						.catch(reject);
+					resolve(response.headers.location);
 					return;
 				}
 				if (response.statusCode !== 200) {
@@ -106,12 +133,10 @@ class DownloadService {
 				}
 				const writeStream = createWriteStream(filePath);
 				pipeline(response, writeStream)
-					.then(resolve)
+					.then(() => resolve(null))
 					.catch(reject);
 			}).on('error', reject);
 		});
-
-		return { filename, filePath };
 	}
 
 	/**
@@ -126,22 +151,29 @@ class DownloadService {
 
 		const args = [
 			'--format', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`,
-			'--output', outputTemplate,
 			'--no-playlist',
+			'--output', outputTemplate,
 			'--print', 'after_move:filepath',
 			url,
 		];
 
 		logger.info(`Downloading YouTube video: ${url} (quality: ${quality}p)`);
 
-		const { stdout } = await execFileAsync('yt-dlp', args, {
-			timeout: DOWNLOAD_TIMEOUT_MS,
-		});
+		try {
+			const { stdout } = await execFileAsync('yt-dlp', args, {
+				timeout: DOWNLOAD_TIMEOUT_MS,
+			});
 
-		const filePath = stdout.trim().split('\n').pop();
-		const filename = path.basename(filePath);
+			const filePath = stdout.trim().split('\n').pop();
+			const filename = path.basename(filePath);
 
-		return { filename, filePath };
+			return { filename, filePath };
+		} catch (err) {
+			if (err.code === 'ENOENT') {
+				throw new Error('yt-dlp is not installed on this system');
+			}
+			throw err;
+		}
 	}
 
 	/**
@@ -150,11 +182,15 @@ class DownloadService {
 	 * @returns {string} Extracted or generated filename
 	 */
 	extractFilename(url) {
-		const urlPath = new URL(url).pathname;
-		const basename = path.basename(urlPath);
+		try {
+			const urlPath = new URL(url).pathname;
+			const basename = path.basename(urlPath);
 
-		if (basename && basename !== '/' && basename.includes('.')) {
-			return decodeURIComponent(basename);
+			if (basename && basename !== '/' && basename.includes('.')) {
+				return decodeURIComponent(basename);
+			}
+		} catch {
+			// Malformed URL — fall through to default
 		}
 
 		const timestamp = Date.now();
@@ -167,13 +203,21 @@ class DownloadService {
 	 */
 	cleanup(filePaths) {
 		for (const filePath of filePaths) {
-			try {
-				if (fs.existsSync(filePath)) {
-					fs.unlinkSync(filePath);
-				}
-			} catch (err) {
-				logger.warn(`Failed to cleanup file: ${filePath} - ${err.message}`);
+			this.cleanupFile(filePath);
+		}
+	}
+
+	/**
+	 * Removes a single file if it exists.
+	 * @param {string} filePath - Path to the file to remove
+	 */
+	cleanupFile(filePath) {
+		try {
+			if (fs.existsSync(filePath)) {
+				fs.unlinkSync(filePath);
 			}
+		} catch (err) {
+			logger.warn(`Failed to cleanup file: ${filePath} - ${err.message}`);
 		}
 	}
 }

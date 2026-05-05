@@ -22,8 +22,11 @@ function verifyWebhookSignature(req, res, next) {
 	const payload = JSON.stringify(req.body);
 	const hmac = crypto.createHmac('sha256', environment.webhookSecret);
 	const digest = `sha256=${hmac.update(payload).digest('hex')}`;
+	const signatureBuffer = Buffer.from(signature);
+	const digestBuffer = Buffer.from(digest);
 
-	if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+	if (signatureBuffer.length !== digestBuffer.length ||
+		!crypto.timingSafeEqual(signatureBuffer, digestBuffer)) {
 		logger.warn('Webhook request has invalid signature');
 		res.status(401).json({ error: 'Invalid signature' });
 		return;

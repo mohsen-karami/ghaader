@@ -118,7 +118,7 @@ src/
 - [x] Configuration module (environment variables)
 - [x] Webhook signature verification middleware
 - [x] Download service (URL extraction, file download, YouTube via yt-dlp)
-- [ ] File service (size check, multi-part zip splitting)
+- [x] File service (size check, multi-part zip splitting)
 - [ ] GitHub service (comments with attachments, labels, close issue)
 - [ ] Webhook controller (orchestration layer)
 - [ ] Express app setup and route wiring
