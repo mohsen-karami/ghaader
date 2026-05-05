@@ -121,7 +121,7 @@ src/
 - [x] File service (size check, multi-part zip splitting)
 - [x] GitHub service (comments with attachments, labels, close issue)
 - [x] Webhook controller (orchestration layer)
-- [ ] Express app setup and route wiring
+- [x] Express app setup and route wiring
 - [ ] PM2 ecosystem config
 
 ### Running Locally
