@@ -116,7 +116,7 @@ src/
 - [x] Project setup (package.json, ESLint, GitHub Actions, editor configs, .env.example)
 - [x] Logger utility (Winston with daily rotation)
 - [x] Configuration module (environment variables)
-- [ ] Webhook signature verification middleware
+- [x] Webhook signature verification middleware
 - [ ] Download service (URL extraction, file download, YouTube via yt-dlp)
 - [ ] File service (size check, multi-part zip splitting)
 - [ ] GitHub service (comments with attachments, labels, close issue)
