@@ -119,7 +119,7 @@ src/
 - [x] Webhook signature verification middleware
 - [x] Download service (URL extraction, file download, YouTube via yt-dlp)
 - [x] File service (size check, multi-part zip splitting)
-- [ ] GitHub service (comments with attachments, labels, close issue)
+- [x] GitHub service (comments with attachments, labels, close issue)
 - [ ] Webhook controller (orchestration layer)
 - [ ] Express app setup and route wiring
 - [ ] PM2 ecosystem config

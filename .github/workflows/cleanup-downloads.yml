@@ -1,0 +1,56 @@
+name: Cleanup Downloads
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    name: Remove files older than 7 days
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find and delete old download files
+        run: |
+          DOWNLOADS_DIR="downloads"
+          DAYS_OLD=7
+
+          if [ ! -d "$DOWNLOADS_DIR" ]; then
+            echo "No downloads directory found. Nothing to clean."
+            exit 0
+          fi
+
+          CUTOFF_DATE=$(date -d "${DAYS_OLD} days ago" +%s)
+          DELETED=0
+
+          for dir in "$DOWNLOADS_DIR"/issue-*; do
+            [ -d "$dir" ] || continue
+
+            COMMIT_DATE=$(git log -1 --format="%ct" -- "$dir" 2>/dev/null)
+            if [ -z "$COMMIT_DATE" ]; then
+              continue
+            fi
+
+            if [ "$COMMIT_DATE" -lt "$CUTOFF_DATE" ]; then
+              echo "Removing $dir (older than ${DAYS_OLD} days)"
+              git rm -rf "$dir"
+              DELETED=$((DELETED + 1))
+            fi
+          done
+
+          if [ "$DELETED" -gt 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore(cleanup): Remove ${DELETED} download directories older than ${DAYS_OLD} days"
+            git push
+            echo "Cleaned up ${DELETED} directories."
+          else
+            echo "No old downloads to clean up."
+          fi
