@@ -122,7 +122,7 @@ src/
 - [x] GitHub service (comments with attachments, labels, close issue)
 - [x] Webhook controller (orchestration layer)
 - [x] Express app setup and route wiring
-- [ ] PM2 ecosystem config
+- [x] PM2 ecosystem config
 
 ### Running Locally
 
