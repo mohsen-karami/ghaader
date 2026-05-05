@@ -1,0 +1,41 @@
+{
+	"name": "ghaader",
+	"version": "1.0.0",
+	"description": "GitHub As A DownloadER — Download files from the internet using GitHub Issues",
+	"type": "module",
+	"main": "src/app.js",
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"scripts": {
+		"start": "pm2 start ecosystem.config.cjs",
+		"dev": "node --watch --env-file=.env src/app.js",
+		"lint": "eslint src/",
+		"lint:fix": "eslint src/ --fix"
+	},
+	"keywords": [
+		"github",
+		"webhook",
+		"downloader",
+		"proxy",
+		"iran"
+	],
+	"author": "Mohsen Karami <karami.mohsen@protonmail.com>",
+	"license": "GPL-3.0",
+	"dependencies": {
+		"@octokit/rest": "^21.1.1",
+		"archiver": "^7.0.1",
+		"express": "^5.1.0",
+		"winston": "^3.17.0",
+		"winston-daily-rotate-file": "^5.0.0"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.27.0",
+		"eslint": "^9.27.0",
+		"eslint-plugin-import": "^2.32.0",
+		"eslint-plugin-jsdoc": "^60.3.0",
+		"eslint-plugin-promise": "^7.2.1",
+		"eslint-plugin-sonarjs": "^4.0.3",
+		"globals": "^16.1.0"
+	}
+}

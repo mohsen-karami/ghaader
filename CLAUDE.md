@@ -14,7 +14,6 @@ npm start              # Start server with PM2
 npm run dev            # Dev server with --watch (auto-restart)
 npm run lint           # Lint all source files
 npm run lint:fix       # Lint and auto-fix all source files
-npm run lint:pr        # Lint files changed in current PR branch
 ```
 
 ## Architecture

@@ -112,8 +112,8 @@ src/
 
 ### To-Do List
 
-- [ ] CLAUDE.md and project skills
-- [ ] Project setup (package.json, ESLint, GitHub Actions, editor configs, .env.example)
+- [x] CLAUDE.md and project skills
+- [x] Project setup (package.json, ESLint, GitHub Actions, editor configs, .env.example)
 - [ ] Logger utility (Winston with daily rotation)
 - [ ] Configuration module (environment variables)
 - [ ] Webhook signature verification middleware
