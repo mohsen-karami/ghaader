@@ -104,8 +104,8 @@ LOG_LEVEL=info
 ## Logging
 
 - Winston with daily rotation
-- 7 days active logs
-- Compressed (gzip) after 7 days
+- Daily rotation (one file per day)
+- Compressed (gzip) immediately on rotation
 - Deleted after 180 days (6 months)
 - Levels: error, warn, info, debug
 

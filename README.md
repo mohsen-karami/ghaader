@@ -115,7 +115,7 @@ src/
 - [x] CLAUDE.md and project skills
 - [x] Project setup (package.json, ESLint, GitHub Actions, editor configs, .env.example)
 - [x] Logger utility (Winston with daily rotation)
-- [ ] Configuration module (environment variables)
+- [x] Configuration module (environment variables)
 - [ ] Webhook signature verification middleware
 - [ ] Download service (URL extraction, file download, YouTube via yt-dlp)
 - [ ] File service (size check, multi-part zip splitting)
