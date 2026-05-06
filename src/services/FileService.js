@@ -50,14 +50,13 @@ class FileService {
 	}
 
 	/**
-	 * Splits a file into multi-part zip archives.
+	 * Splits a file into multi-part zip archives using streams.
 	 * @param {string} filePath - Path to the source file
 	 * @param {string} filename - Original filename for the archive
 	 * @returns {Promise<object[]>} Array of part file objects
 	 */
 	async splitIntoZipParts(filePath, filename) {
-		const fileBuffer = fs.readFileSync(filePath);
-		const totalSize = fileBuffer.length;
+		const totalSize = fs.statSync(filePath).size;
 		const partCount = Math.ceil(totalSize / this.maxSizeBytes);
 		const parts = [];
 
@@ -67,10 +66,10 @@ class FileService {
 			const partPath = path.join(this.tmpDir, partName);
 
 			const start = index * this.maxSizeBytes;
-			const end = Math.min(start + this.maxSizeBytes, totalSize);
-			const chunk = fileBuffer.subarray(start, end);
+			const end = Math.min(start + this.maxSizeBytes, totalSize) - 1;
 
-			await this.createZipPart({ data: chunk, filename, outputPath: partPath, partIndex: index });
+			const partOptions = { end, filename, outputPath: partPath, partIndex: index, sourcePath: filePath, start };
+			await this.createZipPart(partOptions);
 			parts.push({ filename: partName, filePath: partPath });
 		}
 
@@ -79,18 +78,21 @@ class FileService {
 	}
 
 	/**
-	 * Creates a single zip archive containing a chunk of data.
+	 * Creates a single zip archive from a file stream range.
 	 * @param {object} options - Zip part options
-	 * @param {string} options.outputPath - Path for the output zip file
-	 * @param {Buffer} options.data - The chunk data to archive
+	 * @param {number} options.end - End byte position (inclusive)
 	 * @param {string} options.filename - Name for the file inside the archive
+	 * @param {string} options.outputPath - Path for the output zip file
 	 * @param {number} options.partIndex - Part index for naming
+	 * @param {string} options.sourcePath - Source file to read from
+	 * @param {number} options.start - Start byte position
 	 * @returns {Promise<void>} Resolves when archive is written
 	 */
-	createZipPart({ data, filename, outputPath, partIndex }) {
+	createZipPart({ end, filename, outputPath, partIndex, sourcePath, start }) {
 		return new Promise((resolve, reject) => {
 			const output = fs.createWriteStream(outputPath);
 			const archive = archiver('zip', { zlib: { level: 1 } });
+			const readStream = fs.createReadStream(sourcePath, { end, start });
 
 			output.on('close', resolve);
 			output.on('error', reject);
@@ -99,7 +101,7 @@ class FileService {
 			archive.pipe(output);
 
 			const entryName = `${filename}.part${String(partIndex + 1).padStart(3, '0')}`;
-			archive.append(data, { name: entryName });
+			archive.append(readStream, { name: entryName });
 			archive.finalize();
 		});
 	}
