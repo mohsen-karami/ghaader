@@ -58,32 +58,29 @@ Anyone can deploy their own Ghaader instance. You do not need to pay GitHub for 
    - Go to your forked repo → Settings → Webhooks → Add webhook
    - Payload URL: `http://<your-server-ip>:<port>/webhooks/github`
    - Content type: `application/json`
-   - Secret: choose a strong secret (you will need this in your `.env`)
+   - Secret: choose a strong secret (you will need this in your ecosystem config)
    - Events: select "Issues" only
 5. **Deploy on your server:**
    ```bash
    git clone <your-fork-url>
    cd ghaader
-   cp .env.example .env
-   # Edit .env with your GITHUB_TOKEN and WEBHOOK_SECRET
    npm install
+   # Edit ecosystem.config.cjs with your values (see Configuration below)
    pm2 start ecosystem.config.cjs
    ```
 
 ### Configuration
 
-Copy `.env.example` to `.env` and fill in the required values:
+Edit the `env` object in `ecosystem.config.cjs` with your values:
 
-```
-# Required
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
-WEBHOOK_SECRET=your-webhook-secret-here
-
-# Optional (defaults shown)
-PORT=3000
-MAX_FILE_SIZE_MB=24
-LOG_LEVEL=info
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | Yes | GitHub Personal Access Token with repo permissions |
+| `WEBHOOK_SECRET` | Yes | The secret you set when configuring the webhook |
+| `PORT` | No | Server port (default: 3000) |
+| `MAX_FILE_SIZE_MB` | No | Max file size before splitting (default: 24) |
+| `LOG_LEVEL` | No | Logging level: error, warn, info, debug (default: info) |
+| `YOUTUBE_COOKIES_PATH` | No | Path to cookies.txt for YouTube downloads (see below) |
 
 ## YouTube Cookies Setup
 
@@ -131,29 +128,16 @@ src/
 
 ## Development
 
-### To-Do List
-
-- [x] CLAUDE.md and project skills
-- [x] Project setup (package.json, ESLint, GitHub Actions, editor configs, .env.example)
-- [x] Logger utility (Winston with daily rotation)
-- [x] Configuration module (environment variables)
-- [x] Webhook signature verification middleware
-- [x] Download service (URL extraction, file download, YouTube via yt-dlp)
-- [x] File service (size check, multi-part zip splitting)
-- [x] GitHub service (comments with attachments, labels, close issue)
-- [x] Webhook controller (orchestration layer)
-- [x] Express app setup and route wiring
-- [x] PM2 ecosystem config
-
-### Running Locally
-
+For production (via PM2):
 ```bash
 npm install
-npm start
+pm2 start ecosystem.config.cjs
 ```
 
 For development with auto-restart:
 ```bash
+cp .env.example .env
+# Edit .env with your actual values
 npm run dev
 ```
 
