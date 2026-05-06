@@ -31,57 +31,50 @@ class FileService {
 	}
 
 	/**
-	 * Processes a file: returns as-is or splits into parts.
-	 * @param {string} filePath - Path to the downloaded file
+	 * Returns split plan metadata without creating any files.
+	 * @param {string} filePath - Path to the file
 	 * @param {string} filename - Original filename
-	 * @returns {Promise<object[]>} Array of file objects with path and name
+	 * @returns {object} Plan with partCount and totalSize
 	 */
-	async process(filePath, filename) {
-		try {
-			if (!this.needsSplit(filePath)) {
-				return [{ filename, filePath }];
-			}
+	getSplitPlan(filePath, filename) {
+		const totalSize = fs.statSync(filePath).size;
+		const partCount = Math.ceil(totalSize / this.maxSizeBytes);
 
-			logger.info(`File exceeds ${environment.maxFileSizeMb}MB, splitting: ${filename}`);
-			return await this.splitIntoZipParts(filePath, filename);
-		} catch (err) {
-			throw new Error(`Failed to process file "${filename}": ${err.message}`);
-		}
+		logger.info(`File exceeds ${environment.maxFileSizeMb}MB, will split into ${partCount} parts: ${filename}`);
+		return { filename, filePath, partCount, totalSize };
 	}
 
 	/**
-	 * Splits a file into multi-part zip archives using streams.
-	 * @param {string} filePath - Path to the source file
-	 * @param {string} filename - Original filename for the archive
-	 * @returns {Promise<object[]>} Array of part file objects
+	 * Creates a single zip part from a split plan.
+	 * @param {object} plan - The split plan from getSplitPlan
+	 * @param {number} index - Part index to create
+	 * @returns {Promise<object>} File object with path and name
 	 */
-	async splitIntoZipParts(filePath, filename) {
-		const totalSize = fs.statSync(filePath).size;
-		const partCount = Math.ceil(totalSize / this.maxSizeBytes);
-		const parts = [];
+	async createPart(plan, index) {
+		const partNum = String(index + 1).padStart(3, '0');
+		const partName = `${plan.filename}.zip.${partNum}`;
+		const partPath = path.join(this.tmpDir, partName);
 
-		for (let index = 0; index < partCount; index++) {
-			const partNum = String(index + 1).padStart(3, '0');
-			const partName = `${filename}.zip.${partNum}`;
-			const partPath = path.join(this.tmpDir, partName);
+		const start = index * this.maxSizeBytes;
+		const end = Math.min(start + this.maxSizeBytes, plan.totalSize) - 1;
 
-			const start = index * this.maxSizeBytes;
-			const end = Math.min(start + this.maxSizeBytes, totalSize) - 1;
+		await this.createZipPart({
+			end,
+			filename: plan.filename,
+			outputPath: partPath,
+			partIndex: index,
+			sourcePath: plan.filePath,
+			start,
+		});
 
-			const partOptions = { end, filename, outputPath: partPath, partIndex: index, sourcePath: filePath, start };
-			await this.createZipPart(partOptions);
-			parts.push({ filename: partName, filePath: partPath });
-		}
-
-		logger.info(`Split into ${partCount} parts: ${filename}`);
-		return parts;
+		return { filename: partName, filePath: partPath };
 	}
 
 	/**
 	 * Creates a single zip archive from a file stream range.
 	 * @param {object} options - Zip part options
 	 * @param {number} options.end - End byte position (inclusive)
-	 * @param {string} options.filename - Name for the file inside the archive
+	 * @param {string} options.filename - Name for the file inside archive
 	 * @param {string} options.outputPath - Path for the output zip file
 	 * @param {number} options.partIndex - Part index for naming
 	 * @param {string} options.sourcePath - Source file to read from

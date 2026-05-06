@@ -70,81 +70,123 @@ class WebhookController {
 			return;
 		}
 
-		const results = await this.downloadAll(urls, title);
-		await this.postResults({ issueNumber, owner, repo, results });
-	}
-
-	/**
-	 * Downloads all URLs and collects results.
-	 * @param {string[]} urls - URLs to download
-	 * @param {string} title - Issue title for quality parsing
-	 * @returns {Promise<object>} Results with successes and failures
-	 */
-	async downloadAll(urls, title) {
 		const failures = [];
-		const successes = [];
+		let successCount = 0;
 
 		for (const url of urls) {
 			try {
-				const result = await this.downloadService.download(url, title);
-				const files = await this.fileService.process(result.filePath, result.filename);
-				successes.push({ files, url });
+				await this.processUrl({ issueNumber, owner, repo, title, url });
+				successCount++;
 			} catch (err) {
 				logger.error(`Download failed for ${url}: ${err.message}`);
 				failures.push({ error: err.message, url });
 			}
 		}
 
-		return { failures, successes };
+		await this.finalizeIssue({ failures, issueNumber, owner, repo, successCount });
 	}
 
 	/**
-	 * Posts download results as issue comments and closes issue.
-	 * @param {object} options - Result posting options
+	 * Downloads, splits, and uploads a single URL.
+	 * @param {object} options - URL processing options
 	 * @param {number} options.issueNumber - Issue number
 	 * @param {string} options.owner - Repository owner
 	 * @param {string} options.repo - Repository name
-	 * @param {object} options.results - Download results
-	 * @returns {Promise<void>} Resolves when posting is complete
+	 * @param {string} options.title - Issue title
+	 * @param {string} options.url - URL to process
+	 * @returns {Promise<void>} Resolves when upload is complete
 	 */
-	async postResults({ issueNumber, owner, repo, results }) {
-		const { failures, successes } = results;
-		const allFiles = successes.flatMap((success) => success.files);
-		const filePaths = allFiles.map((file) => file.filePath);
+	async processUrl({ issueNumber, owner, repo, title, url }) {
+		const result = await this.downloadService.download(url, title);
 
 		try {
-			if (allFiles.length > 0) {
+			if (!this.fileService.needsSplit(result.filePath)) {
+				await this.uploadSingleFile({ file: result, issueNumber, owner, repo });
+			} else {
+				await this.uploadSplitFile({ issueNumber, owner, repo, result });
+			}
+		} finally {
+			this.downloadService.cleanupFile(result.filePath);
+		}
+	}
+
+	/**
+	 * Uploads a single file that does not need splitting.
+	 * @param {object} options - Upload options
+	 * @param {object} options.file - File object with filePath and filename
+	 * @param {number} options.issueNumber - Issue number
+	 * @param {string} options.owner - Repository owner
+	 * @param {string} options.repo - Repository name
+	 * @returns {Promise<void>} Resolves when upload is complete
+	 */
+	async uploadSingleFile({ file, issueNumber, owner, repo }) {
+		await this.gitHubService.postFileComments({
+			files: [file],
+			issueNumber,
+			owner,
+			repo,
+		});
+	}
+
+	/**
+	 * Splits a file and uploads parts one at a time to save memory.
+	 * @param {object} options - Split upload options
+	 * @param {number} options.issueNumber - Issue number
+	 * @param {string} options.owner - Repository owner
+	 * @param {string} options.repo - Repository name
+	 * @param {object} options.result - Download result with filePath/filename
+	 * @returns {Promise<void>} Resolves when all parts are uploaded
+	 */
+	async uploadSplitFile({ issueNumber, owner, repo, result }) {
+		const plan = this.fileService.getSplitPlan(result.filePath, result.filename);
+
+		for (let index = 0; index < plan.partCount; index++) {
+			const part = await this.fileService.createPart(plan, index);
+
+			try {
 				await this.gitHubService.postFileComments({
-					files: allFiles,
+					files: [part],
 					issueNumber,
 					owner,
 					repo,
 				});
+			} finally {
+				this.downloadService.cleanupFile(part.filePath);
 			}
-
-			if (failures.length > 0) {
-				await this.gitHubService.postErrorComment({ failures, issueNumber, owner, repo });
-			}
-
-			const outcome = this.determineOutcome(successes, failures);
-			await this.gitHubService.applyLabel({ issueNumber, outcome, owner, repo });
-			await this.gitHubService.closeIssue({ issueNumber, owner, repo });
-		} finally {
-			this.downloadService.cleanup(filePaths);
 		}
 	}
 
 	/**
+	 * Posts errors, applies label, and closes the issue.
+	 * @param {object} options - Finalization options
+	 * @param {object[]} options.failures - Failed download list
+	 * @param {number} options.issueNumber - Issue number
+	 * @param {string} options.owner - Repository owner
+	 * @param {string} options.repo - Repository name
+	 * @param {number} options.successCount - Number of successful downloads
+	 * @returns {Promise<void>} Resolves when issue is finalized
+	 */
+	async finalizeIssue({ failures, issueNumber, owner, repo, successCount }) {
+		if (failures.length > 0) {
+			await this.gitHubService.postErrorComment({ failures, issueNumber, owner, repo });
+		}
+
+		const outcome = this.determineOutcome(successCount, failures.length);
+		await this.gitHubService.applyLabel({ issueNumber, outcome, owner, repo });
+		await this.gitHubService.closeIssue({ issueNumber, owner, repo });
+	}
+
+	/**
 	 * Determines the processing outcome label.
-	 * @param {object[]} successes - Successful downloads
-	 * @param {object[]} failures - Failed downloads
+	 * @param {number} successCount - Number of successful downloads
+	 * @param {number} failureCount - Number of failed downloads
 	 * @returns {string} Outcome label key
 	 */
-	determineOutcome(successes, failures) {
-		if (failures.length === 0) {
+	determineOutcome(successCount, failureCount) {
+		if (failureCount === 0) {
 			return 'completed';
 		}
-		if (successes.length === 0) {
+		if (successCount === 0) {
 			return 'failed';
 		}
 		return 'partial';
