@@ -17,7 +17,7 @@ No paid GitHub features are required. Webhooks and the GitHub API are completely
 3. It downloads each file from the provided URLs
    - For YouTube links, Ghaader uses `yt-dlp` to download the video. You can specify the desired quality in the issue title (e.g., `720p`, `1080p`, `480p`, `4k`). If no quality is specified, it defaults to 720p. If the requested quality is higher than what's available, the highest available quality is downloaded.
 4. Files are uploaded as attachments in the issue comments
-5. If a file exceeds 60MB (GitHub's Contents API limit after base64 encoding), it is split into multi-part zip archives that you can extract by opening the first part with any zip utility (WinRAR, 7-Zip, The Unarchiver, etc.)
+5. If a file exceeds 95MB (GitHub's 100MB per-file limit), it is split into multi-part zip archives that you can extract by opening the first part with any zip utility (WinRAR, 7-Zip, The Unarchiver, etc.)
 6. The issue is labeled based on the outcome and closed automatically
 
 ### Labels
@@ -72,12 +72,14 @@ Anyone can deploy their own Ghaader instance. You do not need to pay GitHub for 
    - Events: select "Issues" only
 5. **Deploy on your server:**
    ```bash
-   git clone <your-fork-url>
-   cd ghaader
+   git clone https://<YOUR_TOKEN>@github.com/<you>/<your-fork>.git
+   cd <your-fork>
    npm install
    # Edit ecosystem.config.cjs with your values (see Configuration below)
+   # Set REPO_PATH to this directory's absolute path
    pm2 start ecosystem.config.cjs
    ```
+   **Important:** Clone using your PAT in the URL so git push works without prompting for credentials.
 
 ### Configuration
 
@@ -88,7 +90,8 @@ Edit the `env` object in `ecosystem.config.cjs` with your values:
 | `GITHUB_TOKEN` | Yes | GitHub Personal Access Token with repo permissions |
 | `WEBHOOK_SECRET` | Yes | The secret you set when configuring the webhook |
 | `PORT` | No | Server port (default: 3000) |
-| `MAX_FILE_SIZE_MB` | No | Max file size before splitting (default: 60) |
+| `REPO_PATH` | Yes | Absolute path to the cloned repository on the server |
+| `MAX_FILE_SIZE_MB` | No | Max file size before splitting (default: 95) |
 | `LOG_LEVEL` | No | Logging level: error, warn, info, debug (default: info) |
 | `YOUTUBE_COOKIES_PATH` | No | Path to cookies.txt for YouTube downloads (see below) |
 

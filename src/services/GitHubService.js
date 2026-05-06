@@ -1,10 +1,15 @@
+import { execFile } from 'child_process';
 import fs from 'fs';
+import path from 'path';
+import { promisify } from 'util';
 
 import { Octokit } from '@octokit/rest';
 
 import { ISSUE_LABELS, MAX_ATTACHMENTS_PER_COMMENT } from '../config/constants.js';
 import environment from '../config/environment.js';
 import logger from '../utils/logger.js';
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Handles GitHub API interactions for issues.
@@ -71,7 +76,7 @@ class GitHubService {
 	}
 
 	/**
-	 * Uploads a file to the repository and returns its download URL.
+	 * Uploads a file to the repository via git and returns its download URL.
 	 * @param {object} options - Upload options
 	 * @param {object} options.file - File object with filePath and filename
 	 * @param {number} options.issueNumber - Issue number for context
@@ -80,18 +85,29 @@ class GitHubService {
 	 * @returns {Promise<string>} Download URL for the uploaded file
 	 */
 	async uploadAsset({ file, issueNumber, owner, repo }) {
-		const uploadPath = `downloads/issue-${issueNumber}/${file.filename}`;
-		const base64Content = fs.readFileSync(file.filePath, { encoding: 'base64' });
+		const repoDir = environment.repoPath;
+		const relativePath = `downloads/issue-${issueNumber}/${file.filename}`;
+		const destPath = path.join(repoDir, relativePath);
 
-		const response = await this.octokit.repos.createOrUpdateFileContents({
-			content: base64Content,
-			message: `Upload ${file.filename} for issue #${issueNumber}`,
-			owner,
-			path: uploadPath,
-			repo,
-		});
+		fs.mkdirSync(path.dirname(destPath), { recursive: true });
+		fs.copyFileSync(file.filePath, destPath);
 
-		return response.data.content.download_url;
+		await this.gitExec(['add', relativePath], repoDir);
+		await this.gitExec(['commit', '-m', `Upload ${file.filename} for issue #${issueNumber}`], repoDir);
+		await this.gitExec(['push'], repoDir);
+
+		return `https://github.com/${owner}/${repo}/raw/master/${relativePath}`;
+	}
+
+	/**
+	 * Executes a git command in the specified directory.
+	 * @param {string[]} args - Git command arguments
+	 * @param {string} cwd - Working directory
+	 * @returns {Promise<string>} Command stdout
+	 */
+	async gitExec(args, cwd) {
+		const { stdout } = await execFileAsync('git', args, { cwd });
+		return stdout.trim();
 	}
 
 	/**
