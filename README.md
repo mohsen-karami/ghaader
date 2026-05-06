@@ -72,14 +72,17 @@ Anyone can deploy their own Ghaader instance. You do not need to pay GitHub for 
    - Events: select "Issues" only
 5. **Deploy on your server:**
    ```bash
+   # Clone using HTTPS with your token (required for automated git push)
    git clone https://<YOUR_TOKEN>@github.com/<you>/<your-fork>.git
    cd <your-fork>
+   git config user.name "Your Name"
+   git config user.email "your@email.com"
    npm install
    # Edit ecosystem.config.cjs with your values (see Configuration below)
-   # Set REPO_PATH to this directory's absolute path
+   # Set REPO_PATH to this directory's absolute path (e.g., /home/user/ghaader)
    pm2 start ecosystem.config.cjs
    ```
-   **Important:** Clone using your PAT in the URL so git push works without prompting for credentials.
+   **Important:** You must clone using HTTPS with your PAT embedded in the URL. SSH keys with passphrases will cause the app to hang on push. The HTTPS + token approach requires no interaction and works reliably for automated services.
 
 ### Configuration
 
