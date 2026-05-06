@@ -1,4 +1,5 @@
 import logger from '../utils/logger.js';
+import processingQueue from '../utils/queue.js';
 
 /**
  * Handles incoming GitHub webhook requests.
@@ -42,13 +43,13 @@ class WebhookController {
 		const issue = req.body.issue;
 		const repo = req.body.repository;
 
-		await this.processIssue({
+		processingQueue.enqueue(() => this.processIssue({
 			body: issue.body,
 			issueNumber: issue.number,
 			owner: repo.owner.login,
 			repo: repo.name,
 			title: issue.title,
-		});
+		}));
 	}
 
 	/**
