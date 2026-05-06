@@ -149,9 +149,10 @@ class DownloadService {
 	async downloadYoutube(url, issueTitle) {
 		const quality = this.parseQuality(issueTitle);
 		const outputTemplate = path.join(this.tmpDir, '%(title)s.%(ext)s');
+		const formatStr = await this.buildYoutubeFormat(quality);
 
 		const args = [
-			'--format', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`,
+			'--format', formatStr,
 			'--js-runtimes', 'node',
 			'--no-playlist',
 			'--output', outputTemplate,
@@ -172,6 +173,32 @@ class DownloadService {
 			return { filename: path.basename(filePath), filePath };
 		} catch (err) {
 			throw this.handleYtdlpError(err);
+		}
+	}
+
+	/**
+	 * Builds the yt-dlp format string based on ffmpeg availability.
+	 * @param {string} quality - Desired video height
+	 * @returns {Promise<string>} Format string for yt-dlp
+	 */
+	async buildYoutubeFormat(quality) {
+		const hasFfmpeg = await this.checkFfmpeg();
+		if (hasFfmpeg) {
+			return `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`;
+		}
+		return `best[height<=${quality}]/best`;
+	}
+
+	/**
+	 * Checks if ffmpeg is available on the system.
+	 * @returns {Promise<boolean>} True if ffmpeg is installed
+	 */
+	async checkFfmpeg() {
+		try {
+			await execFileAsync('ffmpeg', ['-version']);
+			return true;
+		} catch {
+			return false;
 		}
 	}
 
