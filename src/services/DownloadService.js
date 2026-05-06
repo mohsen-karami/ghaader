@@ -163,24 +163,39 @@ class DownloadService {
 		}
 
 		args.push(url);
-
 		logger.info(`Downloading YouTube video: ${url} (quality: ${quality}p)`);
 
 		try {
-			const { stdout } = await execFileAsync('yt-dlp', args, {
-				timeout: DOWNLOAD_TIMEOUT_MS,
-			});
-
+			const { stdout } = await execFileAsync('yt-dlp', args, { timeout: DOWNLOAD_TIMEOUT_MS });
 			const filePath = stdout.trim().split('\n').pop();
-			const filename = path.basename(filePath);
-
-			return { filename, filePath };
+			return { filename: path.basename(filePath), filePath };
 		} catch (err) {
-			if (err.code === 'ENOENT') {
-				throw new Error('yt-dlp is not installed on this system');
-			}
-			throw err;
+			throw this.handleYtdlpError(err);
 		}
+	}
+
+	/**
+	 * Translates yt-dlp errors into user-friendly messages.
+	 * @param {Error} err - The original yt-dlp error
+	 * @returns {Error} A user-friendly error
+	 */
+	handleYtdlpError(err) {
+		if (err.code === 'ENOENT') {
+			return new Error('yt-dlp is not installed on this system');
+		}
+		if (err.stderr?.includes('Sign in to confirm')) {
+			return new Error(
+				'YouTube requires authentication. The server cookies have expired or are not configured. ' +
+				'Please ask the server admin to refresh the YouTube cookies file.'
+			);
+		}
+		if (err.stderr?.includes('No supported JavaScript runtime')) {
+			return new Error(
+				'YouTube requires a JavaScript runtime (Node.js) but it could not be found. ' +
+				'Please ensure Node.js is accessible in the system PATH.'
+			);
+		}
+		return err;
 	}
 
 	/**
