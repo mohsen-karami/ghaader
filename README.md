@@ -44,6 +44,16 @@ Anyone can deploy their own Ghaader instance. You do not need to pay GitHub for 
 - Node.js 22 or later (LTS)
 - PM2 (process manager): `npm install -g pm2`
 - yt-dlp (for YouTube downloads): install via your package manager or from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
+- ffmpeg (for best YouTube quality — merges video+audio streams):
+  ```bash
+  # Ubuntu/Debian
+  sudo apt install ffmpeg
+  # CentOS/RHEL
+  sudo dnf install ffmpeg
+  # macOS
+  brew install ffmpeg
+  ```
+  Without ffmpeg, YouTube downloads still work but are limited to single-stream formats (usually lower quality).
 - A GitHub account
 
 ### Setup
