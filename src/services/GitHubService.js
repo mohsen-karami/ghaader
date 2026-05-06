@@ -80,9 +80,8 @@ class GitHubService {
 	 * @returns {Promise<string>} Download URL for the uploaded file
 	 */
 	async uploadAsset({ file, issueNumber, owner, repo }) {
-		const content = fs.readFileSync(file.filePath);
-		const base64Content = content.toString('base64');
 		const uploadPath = `downloads/issue-${issueNumber}/${file.filename}`;
+		const base64Content = fs.readFileSync(file.filePath, { encoding: 'base64' });
 
 		const response = await this.octokit.repos.createOrUpdateFileContents({
 			content: base64Content,
