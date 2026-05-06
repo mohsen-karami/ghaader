@@ -17,7 +17,7 @@ No paid GitHub features are required. Webhooks and the GitHub API are completely
 3. It downloads each file from the provided URLs
    - For YouTube links, Ghaader uses `yt-dlp` to download the video. You can specify the desired quality in the issue title (e.g., `720p`, `1080p`, `480p`, `4k`). If no quality is specified, it defaults to 720p. If the requested quality is higher than what's available, the highest available quality is downloaded.
 4. Files are uploaded as attachments in the issue comments
-5. If a file exceeds GitHub's 25MB attachment limit, it is split into multi-part zip archives (each part under 24MB for safety margin) that you can extract by opening the first part with any zip utility (WinRAR, 7-Zip, The Unarchiver, etc.)
+5. If a file exceeds 95MB (GitHub's API limit is 100MB per file), it is split into multi-part zip archives that you can extract by opening the first part with any zip utility (WinRAR, 7-Zip, The Unarchiver, etc.)
 6. The issue is labeled based on the outcome and closed automatically
 
 ### Labels
@@ -88,7 +88,7 @@ Edit the `env` object in `ecosystem.config.cjs` with your values:
 | `GITHUB_TOKEN` | Yes | GitHub Personal Access Token with repo permissions |
 | `WEBHOOK_SECRET` | Yes | The secret you set when configuring the webhook |
 | `PORT` | No | Server port (default: 3000) |
-| `MAX_FILE_SIZE_MB` | No | Max file size before splitting (default: 24) |
+| `MAX_FILE_SIZE_MB` | No | Max file size before splitting (default: 95) |
 | `LOG_LEVEL` | No | Logging level: error, warn, info, debug (default: info) |
 | `YOUTUBE_COOKIES_PATH` | No | Path to cookies.txt for YouTube downloads (see below) |
 
