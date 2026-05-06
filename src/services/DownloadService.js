@@ -156,6 +156,7 @@ class DownloadService {
 			'--no-playlist',
 			'--output', outputTemplate,
 			'--print', 'after_move:filepath',
+			'--restrict-filenames',
 		];
 
 		if (environment.youtubeCookiesPath) {
