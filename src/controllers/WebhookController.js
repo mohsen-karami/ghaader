@@ -139,11 +139,9 @@ class WebhookController {
 	 * @returns {Promise<void>} Resolves when all parts are uploaded
 	 */
 	async uploadSplitFile({ issueNumber, owner, repo, result }) {
-		const plan = this.fileService.getSplitPlan(result.filePath, result.filename);
+		const plan = await this.fileService.getSplitPlan(result.filePath, result.filename);
 
-		for (let index = 0; index < plan.partCount; index++) {
-			const part = await this.fileService.createPart(plan, index);
-
+		for (const part of plan.parts) {
 			try {
 				await this.gitHubService.postFileComments({
 					files: [part],

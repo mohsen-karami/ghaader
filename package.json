@@ -24,7 +24,6 @@
 	"license": "GPL-3.0",
 	"dependencies": {
 		"@octokit/rest": "^21.1.1",
-		"archiver": "^7.0.1",
 		"express": "^5.1.0",
 		"winston": "^3.17.0",
 		"winston-daily-rotate-file": "^5.0.0"

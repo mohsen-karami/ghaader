@@ -17,7 +17,7 @@ No paid GitHub features are required. Webhooks and the GitHub API are completely
 3. It downloads each file from the provided URLs
    - For YouTube links, Ghaader uses `yt-dlp` to download the video. You can specify the desired quality in the issue title (e.g., `720p`, `1080p`, `480p`, `4k`). If no quality is specified, it defaults to 720p. If the requested quality is higher than what's available, the highest available quality is downloaded.
 4. Files are uploaded as attachments in the issue comments
-5. If a file exceeds 95MB (GitHub's 100MB per-file limit), it is split into multi-part zip archives that you can extract by opening the first part with any zip utility (WinRAR, 7-Zip, The Unarchiver, etc.)
+5. If a file exceeds 95MB (GitHub's 100MB per-file limit), it is split into multi-part 7z archives. To extract, download all parts and open the first one (`.7z.001`) with 7-Zip, WinRAR, or run `7z x filename.7z.001` on the command line
 6. The issue is labeled based on the outcome and closed automatically
 
 ### Labels
@@ -43,6 +43,7 @@ Anyone can deploy their own Ghaader instance. You do not need to pay GitHub for 
 - A server (VPS, cloud instance, or any machine) with a public IP address
 - Node.js 22 or later (LTS)
 - PM2 (process manager): `npm install -g pm2`
+- p7zip-full (for splitting large files): `sudo apt install p7zip-full`
 - yt-dlp (for YouTube downloads): install via your package manager or from [yt-dlp releases](https://github.com/yt-dlp/yt-dlp/releases)
 - ffmpeg (for best YouTube quality — merges video+audio streams):
   ```bash
@@ -124,7 +125,7 @@ YouTube blocks automated downloads unless you authenticate. You need to export c
 - **Runtime:** Node.js 22+ (LTS)
 - **Framework:** Express.js
 - **GitHub Integration:** @octokit/rest
-- **File Processing:** archiver (multi-part zip)
+- **File Processing:** 7z (multi-part archives, must be installed on server)
 - **Logging:** Winston with daily rotation
 - **Process Manager:** PM2
 - **YouTube Downloads:** yt-dlp (must be installed on the server)
