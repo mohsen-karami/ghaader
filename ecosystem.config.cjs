@@ -12,7 +12,7 @@ module.exports = {
 				GITHUB_TOKEN: 'ghp_xxxxxxxxxxxxxxxxxxxx',
 				WEBHOOK_SECRET: 'your-webhook-secret-here',
 				PORT: 3000,
-				MAX_FILE_SIZE_MB: 95,
+				MAX_FILE_SIZE_MB: 60,
 				LOG_LEVEL: 'info',
 				YOUTUBE_COOKIES_PATH: '',
 			},
