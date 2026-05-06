@@ -12,6 +12,7 @@ class Environment {
 		this.maxFileSizeMb = parseInt(process.env.MAX_FILE_SIZE_MB, 10) || 24;
 		this.port = parseInt(process.env.PORT, 10) || 3000;
 		this.webhookSecret = this.require('WEBHOOK_SECRET');
+		this.youtubeCookiesPath = process.env.YOUTUBE_COOKIES_PATH || '';
 	}
 
 	/**

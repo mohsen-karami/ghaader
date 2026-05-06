@@ -85,6 +85,27 @@ MAX_FILE_SIZE_MB=24
 LOG_LEVEL=info
 ```
 
+## YouTube Cookies Setup
+
+YouTube blocks automated downloads unless you authenticate. You need to export cookies from a browser where you're logged into YouTube and place the file on your server.
+
+1. On your **desktop/laptop**, install a browser extension to export cookies:
+   - Chrome: "Get cookies.txt LOCALLY" extension
+   - Firefox: "cookies.txt" extension
+2. Log into YouTube in your browser
+3. Navigate to youtube.com, then use the extension to export cookies — save as `cookies.txt`
+4. Upload the `cookies.txt` file to your server:
+   ```bash
+   scp cookies.txt user@your-server-ip:/path/to/ghaader/cookies.txt
+   ```
+5. Set the path in your `.env` file:
+   ```
+   YOUTUBE_COOKIES_PATH=/path/to/ghaader/cookies.txt
+   ```
+6. Restart the app: `pm2 restart ghaader`
+
+**Note:** Cookies expire over time (usually every few months). If YouTube downloads start failing again, repeat steps 2–6 with fresh cookies.
+
 ## Tech Stack
 
 - **Runtime:** Node.js 22+ (LTS)

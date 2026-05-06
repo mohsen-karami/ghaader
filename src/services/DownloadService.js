@@ -8,6 +8,7 @@ import { pipeline } from 'stream/promises';
 import { promisify } from 'util';
 
 import { DEFAULT_VIDEO_QUALITY, DOWNLOAD_TIMEOUT_MS, MAX_REDIRECTS, YOUTUBE_PATTERNS } from '../config/constants.js';
+import environment from '../config/environment.js';
 import logger from '../utils/logger.js';
 
 const execFileAsync = promisify(execFile);
@@ -151,11 +152,17 @@ class DownloadService {
 
 		const args = [
 			'--format', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`,
+			'--js-runtimes', 'nodejs',
 			'--no-playlist',
 			'--output', outputTemplate,
 			'--print', 'after_move:filepath',
-			url,
 		];
+
+		if (environment.youtubeCookiesPath) {
+			args.push('--cookies', environment.youtubeCookiesPath);
+		}
+
+		args.push(url);
 
 		logger.info(`Downloading YouTube video: ${url} (quality: ${quality}p)`);
 
