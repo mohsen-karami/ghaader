@@ -152,7 +152,7 @@ class DownloadService {
 
 		const args = [
 			'--format', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]/best`,
-			'--js-runtimes', 'nodejs',
+			'--js-runtimes', 'node',
 			'--no-playlist',
 			'--output', outputTemplate,
 			'--print', 'after_move:filepath',
@@ -183,19 +183,44 @@ class DownloadService {
 		if (err.code === 'ENOENT') {
 			return new Error('yt-dlp is not installed on this system');
 		}
-		if (err.stderr?.includes('Sign in to confirm')) {
+		const output = err.stderr || err.message || '';
+
+		if (output.includes('Sign in to confirm')) {
 			return new Error(
 				'YouTube requires authentication. The server cookies have expired or are not configured. ' +
 				'Please ask the server admin to refresh the YouTube cookies file.'
 			);
 		}
-		if (err.stderr?.includes('No supported JavaScript runtime')) {
+		if (output.includes('Requested format is not available')) {
 			return new Error(
-				'YouTube requires a JavaScript runtime (Node.js) but it could not be found. ' +
-				'Please ensure Node.js is accessible in the system PATH.'
+				'The requested video quality is not available. ' +
+				'This may be caused by a missing JavaScript runtime on the server. ' +
+				'Please ask the server admin to install Node.js and ensure it is in the system PATH.'
 			);
 		}
-		return err;
+		if (output.includes('No supported JavaScript runtime') || output.includes('Ignoring unsupported')) {
+			return new Error(
+				'YouTube requires a JavaScript runtime but none was found or recognized. ' +
+				'Please ensure Node.js is installed and accessible in the system PATH as "node".'
+			);
+		}
+		if (output.includes('Video unavailable')) {
+			return new Error('This video is unavailable (private, deleted, or region-restricted).');
+		}
+		return new Error(`YouTube download failed: ${this.extractYtdlpError(output)}`);
+	}
+
+	/**
+	 * Extracts the meaningful ERROR line from yt-dlp output.
+	 * @param {string} output - Raw yt-dlp stderr output
+	 * @returns {string} Clean error message
+	 */
+	extractYtdlpError(output) {
+		const errorLine = output.split('\n').find((line) => line.includes('ERROR:'));
+		if (errorLine) {
+			return errorLine.replace(/^ERROR:\s*(\[youtube\]\s*\w+:\s*)?/, '').trim();
+		}
+		return 'An unknown error occurred';
 	}
 
 	/**
