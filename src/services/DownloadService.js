@@ -240,6 +240,7 @@ class DownloadService {
 	 * @returns {Error} A user-friendly error
 	 */
 	handleYtdlpError(err) {
+		logger.error(`YouTube download failed: ${err}`);
 		if (err.code === 'ENOENT') {
 			return new Error('yt-dlp is not installed on this system');
 		}
