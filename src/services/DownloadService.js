@@ -170,9 +170,38 @@ class DownloadService {
 		try {
 			const { stdout } = await execFileAsync('yt-dlp', args, { timeout: DOWNLOAD_TIMEOUT_MS });
 			const filePath = stdout.trim().split('\n').pop();
-			return { filename: path.basename(filePath), filePath };
+
+			// Post-process the downloaded file with ffmpeg
+			const processedFilePath = await this.postProcessVideo(filePath);
+			return { filename: path.basename(processedFilePath), filePath: processedFilePath };
 		} catch (err) {
 			throw this.handleYtdlpError(err);
+		}
+	}
+
+	/**
+	 * Post-processes the video file using ffmpeg.
+	 * @param {string} filePath - The original video file path
+	 * @returns {Promise<string>} Path to the processed video file
+	 */
+	async postProcessVideo(filePath) {
+		const tempFilePath = `${filePath}.temp`;
+		const args = [
+			'-i', filePath,
+			'-c:v', 'libx264',
+			'-preset', 'fast',
+			'-crf', '23',
+			'-c:a', 'aac',
+			'-b:a', '192k',
+			tempFilePath
+		];
+
+		try {
+			await execFileAsync('ffmpeg', args, { timeout: DOWNLOAD_TIMEOUT_MS });
+			fs.unlinkSync(filePath); // Remove the original file
+			return tempFilePath;
+		} catch (err) {
+			throw new Error(`Failed to post-process video: ${err.message}`);
 		}
 	}
 
