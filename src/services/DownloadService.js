@@ -201,6 +201,9 @@ class DownloadService {
 			fs.unlinkSync(filePath); // Remove the original file
 			return tempFilePath;
 		} catch (err) {
+			if (err.code === 'ENOENT') {
+				return new Error('ffmpeg is not installed on this system or not found in the system PATH. Please ensure ffmpeg is installed and accessible as "ffmpeg".');
+			}
 			throw new Error(`Failed to post-process video: ${err.message}`);
 		}
 	}
@@ -263,6 +266,12 @@ class DownloadService {
 		}
 		if (output.includes('Video unavailable')) {
 			return new Error('This video is unavailable (private, deleted, or region-restricted).');
+		}
+		if (output.includes('The provided YouTube account cookies are no longer valid')) {
+			return new Error(
+				'The provided YouTube account cookies are no longer valid. They have likely been rotated in the browser as a security measure. ' +
+				'Please ask the server admin to refresh the YouTube cookies file.'
+			);
 		}
 		return new Error(`YouTube download failed: ${this.extractYtdlpError(output)}`);
 	}
