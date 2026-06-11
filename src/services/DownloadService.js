@@ -185,7 +185,7 @@ class DownloadService {
 	 * @returns {Promise<string>} Path to the processed video file
 	 */
 	async postProcessVideo(filePath) {
-		const tempFilePath = `${filePath}.temp`;
+		const tempFilePath = `${filePath}.mp4`; // Explicitly specify the output format as .mp4
 		const args = [
 			'-i', filePath,
 			'-c:v', 'libx264',
@@ -204,7 +204,11 @@ class DownloadService {
 			if (err.code === 'ENOENT') {
 				return new Error('ffmpeg is not installed on this system or not found in the system PATH. Please ensure ffmpeg is installed and accessible as "ffmpeg".');
 			}
-			throw new Error(`Failed to post-process video: ${err.message}`);
+			// Handle other errors, e.g., permission issues
+			if (err.message.includes('Permission denied')) {
+				return new Error('Permission denied: Unable to write to the output file.');
+			}
+			return new Error(`Failed to post-process video: ${err.message}`);
 		}
 	}
 
